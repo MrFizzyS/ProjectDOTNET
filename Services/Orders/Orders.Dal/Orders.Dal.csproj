@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net9.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\Orders.Domain\Orders.Domain.csproj"/><PackageReference Include="Dapper" Version="2.1.66"/><PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1"/></ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\db\p1\schema.sql" LogicalName="Orders.Dal.Sql.schema.sql" />
+    <EmbeddedResource Include="..\..\..\db\p1\procedures.sql" LogicalName="Orders.Dal.Sql.procedures.sql" />
+    <EmbeddedResource Include="..\..\..\db\p1\seed.sql" LogicalName="Orders.Dal.Sql.seed.sql" />
+  </ItemGroup>
+  <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App"/></ItemGroup>
+</Project>
