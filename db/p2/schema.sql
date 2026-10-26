@@ -7,8 +7,16 @@ IF OBJECT_ID(N'dbo.GameSystem',N'U') IS NULL CREATE TABLE dbo.GameSystem(
  CONSTRAINT UQ_GameSystem_Name_Edition UNIQUE(Name,Edition));
 GO
 IF OBJECT_ID(N'dbo.Product',N'U') IS NULL CREATE TABLE dbo.Product(
- ProductId uniqueidentifier NOT NULL CONSTRAINT PK_Product PRIMARY KEY DEFAULT NEWSEQUENTIALID(), GameSystemId uniqueidentifier NULL, Sku nvarchar(40) NOT NULL, Name nvarchar(200) NOT NULL, Description nvarchar(1000) NOT NULL DEFAULT N'', ProductType varchar(20) NOT NULL, UnitPrice decimal(10,2) NOT NULL, StockQuantity int NOT NULL DEFAULT 0, IsActive bit NOT NULL DEFAULT 1, CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(), UpdatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(), RowVer rowversion NOT NULL,
- CONSTRAINT FK_Product_GameSystem FOREIGN KEY(GameSystemId) REFERENCES dbo.GameSystem(GameSystemId), CONSTRAINT UQ_Product_Sku UNIQUE(Sku), CONSTRAINT CK_Product_Type CHECK(ProductType IN ('CoreBook','Adventure','Dice','Accessory','Digital')), CONSTRAINT CK_Product_Price CHECK(UnitPrice>=0), CONSTRAINT CK_Product_Stock CHECK(StockQuantity>=0));
+ ProductId uniqueidentifier NOT NULL CONSTRAINT PK_Product PRIMARY KEY DEFAULT NEWSEQUENTIALID(), GameSystemId uniqueidentifier NULL, Sku nvarchar(40) NOT NULL, Name nvarchar(200) NOT NULL, Description nvarchar(1000) NOT NULL DEFAULT N'', ProductType varchar(20) NOT NULL, UnitPrice decimal(18,2) NOT NULL, StockQuantity int NOT NULL DEFAULT 0, IsActive bit NOT NULL DEFAULT 1, CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(), UpdatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(), RowVer rowversion NOT NULL,
+ CONSTRAINT FK_Product_GameSystem FOREIGN KEY(GameSystemId) REFERENCES dbo.GameSystem(GameSystemId), CONSTRAINT UQ_Product_Sku UNIQUE(Sku), CONSTRAINT CK_Product_Type CHECK(ProductType IN ('CoreBook','Adventure','Dice','Accessory','Digital')), CONSTRAINT CK_Product_Price CHECK(UnitPrice>0), CONSTRAINT CK_Product_Stock CHECK(StockQuantity>=0));
+GO
+IF OBJECT_ID(N'dbo.ProductDetail',N'U') IS NULL CREATE TABLE dbo.ProductDetail(
+ ProductId uniqueidentifier NOT NULL CONSTRAINT PK_ProductDetail PRIMARY KEY, Description nvarchar(2000) NOT NULL, Manufacturer nvarchar(120) NULL,
+ CONSTRAINT FK_ProductDetail_Product FOREIGN KEY(ProductId) REFERENCES dbo.Product(ProductId) ON DELETE CASCADE);
+GO
+IF OBJECT_ID(N'dbo.ProductImage',N'U') IS NULL CREATE TABLE dbo.ProductImage(
+ ProductImageId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ProductImage PRIMARY KEY, ProductId uniqueidentifier NOT NULL, Url nvarchar(500) NOT NULL, SortOrder int NOT NULL,
+ CONSTRAINT FK_ProductImage_Product FOREIGN KEY(ProductId) REFERENCES dbo.Product(ProductId) ON DELETE CASCADE, CONSTRAINT UQ_ProductImage_Product_Sort UNIQUE(ProductId,SortOrder), CONSTRAINT CK_ProductImage_SortOrder CHECK(SortOrder>=0));
 GO
 IF OBJECT_ID(N'dbo.Category',N'U') IS NULL CREATE TABLE dbo.Category(CategoryId int IDENTITY(1,1) CONSTRAINT PK_Category PRIMARY KEY, Name nvarchar(80) NOT NULL CONSTRAINT UQ_Category_Name UNIQUE);
 GO
@@ -25,6 +33,8 @@ IF OBJECT_ID(N'dbo.CollectionItem',N'U') IS NULL CREATE TABLE dbo.CollectionItem
  CONSTRAINT PK_CollectionItem PRIMARY KEY(CollectionId,ProductId), CONSTRAINT UQ_CollectionItem_Position UNIQUE(CollectionId,Position), CONSTRAINT FK_CollectionItem_Collection FOREIGN KEY(CollectionId) REFERENCES dbo.Collection(CollectionId) ON DELETE CASCADE, CONSTRAINT FK_CollectionItem_Product FOREIGN KEY(ProductId) REFERENCES dbo.Product(ProductId) ON DELETE CASCADE, CONSTRAINT CK_CollectionItem_Position CHECK(Position>0));
 GO
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.Product') AND name=N'IX_Product_Active_Type_Price') CREATE INDEX IX_Product_Active_Type_Price ON dbo.Product(ProductType,UnitPrice) INCLUDE(Name,Sku,StockQuantity) WHERE IsActive=1;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.Product') AND name=N'IX_Product_GameSystemId') CREATE INDEX IX_Product_GameSystemId ON dbo.Product(GameSystemId);
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.Product') AND name=N'IX_Product_Name') CREATE INDEX IX_Product_Name ON dbo.Product(Name);
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.ProductCategory') AND name=N'IX_ProductCategory_Category') CREATE INDEX IX_ProductCategory_Category ON dbo.ProductCategory(CategoryId,ProductId);
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.CollectionItem') AND name=N'IX_CollectionItem_Product') CREATE INDEX IX_CollectionItem_Product ON dbo.CollectionItem(ProductId,CollectionId);
 GO

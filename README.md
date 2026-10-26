@@ -87,3 +87,7 @@ curl.exe -X DELETE http://localhost:5000/api/orders/33333333-3333-4333-8333-3333
 ```
 
 Ендпоінти `api/customers`, `api/products` і `api/orders` підтримують GET/POST/PUT/DELETE; для замовлення PATCH `/api/orders/{id}/status` виконує бізнес-перехід. POST повертає `201 Created` із `Location`, успішні DELETE — `204`. Некоректні DTO повертають `400`, відсутні записи — `404`, повторний email/SKU, конфлікт конкурентної зміни або недозволений статус — `409` у форматі ProblemDetails. Деталі структури проєктів — у [docs/orders-service.md](docs/orders-service.md).
+
+## Catalog BLL та Web API (Проєкт №2)
+
+`Catalog.Api → Catalog.Bll → Catalog.Dal → Catalog.Domain` реалізує API товарів. BLL працює через `ICatalogUnitOfWork`, DTO, AutoMapper і FluentValidation; контролер не звертається до DbContext. Запуск за замовчуванням застосовує EF-міграції й ідемпотентний demo seed. Каталог підтримує SQL-пагінацію, фільтри, дозволене сортування, Specification pattern і структуроване логування Serilog. Swagger UI доступний на `/swagger`. Докладний порядок запуску та запити для перевірки — у [docs/catalog-api.md](docs/catalog-api.md).

@@ -4,4 +4,8 @@
   <Project Path="Services\Orders\Orders.Bll\Orders.Bll.csproj" />
   <Project Path="Services\Orders\Orders.Dal\Orders.Dal.csproj" />
   <Project Path="Services\Orders\Orders.Domain\Orders.Domain.csproj" />
+  <Project Path="Services\Catalog\Catalog.Domain\Catalog.Domain.csproj" />
+  <Project Path="Services\Catalog\Catalog.Dal\Catalog.Dal.csproj" />
+  <Project Path="Services\Catalog\Catalog.Bll\Catalog.Bll.csproj" />
+  <Project Path="Services\Catalog\Catalog.Api\Catalog.Api.csproj" />
 </Solution>
