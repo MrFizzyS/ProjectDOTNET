@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using Serilog.Events;
+using Platform.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 builder.Host.UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
@@ -46,6 +48,7 @@ app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();
+app.MapDefaultEndpoints();
 app.Run();
 
 public sealed class CatalogExceptionHandler(IProblemDetailsService problemDetails, ILogger<CatalogExceptionHandler> logger)

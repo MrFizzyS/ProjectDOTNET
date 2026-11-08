@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Orders.Bll;
 using Orders.Dal;
 using Orders.Domain;
+using Platform.ServiceDefaults;
 
 var builder=WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 builder.Services.AddLogging();
 builder.Services.AddOrdersDal(builder.Configuration);
 builder.Services.AddScoped<ICustomerService,CustomerService>(); builder.Services.AddScoped<IProductService,ProductService>(); builder.Services.AddScoped<IOrderService,OrderService>();
@@ -23,7 +25,7 @@ if(app.Configuration.GetValue("Database:InitializeOnStartup",true))
     await using var scope=app.Services.CreateAsyncScope();
     await scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>().InitializeAsync();
 }
-app.UseExceptionHandler(); app.UseSwagger(); app.UseSwaggerUI(); app.MapControllers(); app.Run();
+app.UseExceptionHandler(); app.UseSwagger(); app.UseSwaggerUI(); app.MapControllers(); app.MapDefaultEndpoints(); app.Run();
 
 public sealed class GlobalExceptionHandler(IProblemDetailsService problemDetails,ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {

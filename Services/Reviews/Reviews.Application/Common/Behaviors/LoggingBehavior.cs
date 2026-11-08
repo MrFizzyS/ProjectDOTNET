@@ -14,23 +14,28 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
         CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
+
         logger.LogInformation(
-            "Handling request {RequestName} with payload {@Request}.",
-            requestName,
-            request);
+            "Handling request {RequestName}",
+            requestName);
 
         try
         {
             var response = await next(cancellationToken);
+
             logger.LogInformation(
-                "Handled request {RequestName} with response {@Response}.",
-                requestName,
-                response);
+                "Handled request {RequestName}",
+                requestName);
+
             return response;
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Request {RequestName} failed.", requestName);
+            logger.LogError(
+                exception,
+                "Request {RequestName} failed",
+                requestName);
+
             throw;
         }
     }

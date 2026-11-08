@@ -1,6 +1,8 @@
 using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Platform.ServiceDefaults;
 using Reviews.Application.Common.Exceptions;
 using Reviews.Application.Common.Models;
 using Reviews.Application.Reviews.Commands.CreateReview;
@@ -14,7 +16,10 @@ namespace Reviews.WebApi.Controllers;
 
 [ApiController]
 [Route("api/reviews")]
-public sealed class ReviewsController(ISender sender, IMapper mapper) : ControllerBase
+public sealed class ReviewsController(
+    ISender sender,
+    IMapper mapper,
+    ILogger<ReviewsController> logger) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ReviewResponse>), StatusCodes.Status200OK)]
@@ -32,10 +37,13 @@ public sealed class ReviewsController(ISender sender, IMapper mapper) : Controll
     [ProducesResponseType(typeof(ReviewResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ReviewResponse>> GetById(string id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ReviewResponse>> GetById(
+        string id,
+        CancellationToken cancellationToken)
     {
         var query = mapper.Map<GetReviewByIdQuery>(id);
         var review = await sender.Send(query, cancellationToken);
+
         if (review is null)
         {
             throw new NotFoundException($"Review '{id}' was not found.");
@@ -53,16 +61,29 @@ public sealed class ReviewsController(ISender sender, IMapper mapper) : Controll
         CreateReviewRequest request,
         CancellationToken cancellationToken)
     {
+        using var activity = BusinessTelemetry.Source.StartActivity("Reviews.Create");
+
         var command = mapper.Map<CreateReviewCommand>(request);
         var id = await sender.Send(command, cancellationToken);
+
         var query = mapper.Map<GetReviewByIdQuery>(id.ToString());
         var review = await sender.Send(query, cancellationToken);
+
         if (review is null)
         {
             throw new InvalidOperationException("The created review could not be read back.");
         }
 
         var response = mapper.Map<ReviewResponse>(review);
+
+        activity?.SetTag("ReviewId", response.Id);
+        activity?.SetTag("Status", "Created");
+
+        logger.LogInformation(
+            "Review created. {ReviewId} {Status}",
+            response.Id,
+            "Created");
+
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
@@ -77,8 +98,22 @@ public sealed class ReviewsController(ISender sender, IMapper mapper) : Controll
         UpdateReviewRequest request,
         CancellationToken cancellationToken)
     {
-        var command = mapper.Map<UpdateReviewCommand>(request, options => options.Items["Id"] = id);
+        using var activity = BusinessTelemetry.Source.StartActivity("Reviews.Update");
+
+        var command = mapper.Map<UpdateReviewCommand>(
+            request,
+            options => options.Items["Id"] = id);
+
         await sender.Send(command, cancellationToken);
+
+        activity?.SetTag("ReviewId", id);
+        activity?.SetTag("Status", "Updated");
+
+        logger.LogInformation(
+            "Review updated. {ReviewId} {Status}",
+            id,
+            "Updated");
+
         return NoContent();
     }
 
@@ -93,8 +128,22 @@ public sealed class ReviewsController(ISender sender, IMapper mapper) : Controll
         [FromQuery] DeleteReviewRequest request,
         CancellationToken cancellationToken)
     {
-        var command = mapper.Map<DeleteReviewCommand>(request, options => options.Items["Id"] = id);
+        using var activity = BusinessTelemetry.Source.StartActivity("Reviews.Delete");
+
+        var command = mapper.Map<DeleteReviewCommand>(
+            request,
+            options => options.Items["Id"] = id);
+
         await sender.Send(command, cancellationToken);
+
+        activity?.SetTag("ReviewId", id);
+        activity?.SetTag("Status", "Deleted");
+
+        logger.LogInformation(
+            "Review deleted. {ReviewId} {Status}",
+            id,
+            "Deleted");
+
         return NoContent();
     }
 }

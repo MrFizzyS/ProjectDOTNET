@@ -1,5 +1,27 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsAspireHost>true</IsAspireHost></PropertyGroup>
-  <ItemGroup><PackageReference Include="Aspire.Hosting.AppHost" Version="9.0.0"/><PackageReference Include="Aspire.Hosting.SqlServer" Version="9.0.0"/><ProjectReference Include="..\Services\Orders\Orders.Api\Orders.Api.csproj"/></ItemGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.2" />
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsAspireHost>true</IsAspireHost>  <UserSecretsId>6fcb6c2d-e3a4-49b0-a726-0dd630f5b437</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.MongoDB" Version="9.5.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Platform.ServiceDefaults\Platform.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Platform.ApiGateway\Platform.ApiGateway.csproj" />
+    <ProjectReference Include="..\Platform.Aggregator\Platform.Aggregator.csproj" />
+    <ProjectReference Include="..\Services\Orders\Orders.Api\Orders.Api.csproj" />
+    <ProjectReference Include="..\Services\Orders\Orders.Bll\Orders.Bll.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Orders\Orders.Dal\Orders.Dal.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Orders\Orders.Domain\Orders.Domain.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Catalog\Catalog.Api\Catalog.Api.csproj" />
+    <ProjectReference Include="..\Services\Catalog\Catalog.Bll\Catalog.Bll.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Catalog\Catalog.Dal\Catalog.Dal.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Catalog\Catalog.Domain\Catalog.Domain.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Reviews\Reviews.WebApi\Reviews.WebApi.csproj" />
+    <ProjectReference Include="..\Services\Reviews\Reviews.Application\Reviews.Application.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Reviews\Reviews.Infrastructure\Reviews.Infrastructure.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Services\Reviews\Reviews.Domain\Reviews.Domain.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
 </Project>

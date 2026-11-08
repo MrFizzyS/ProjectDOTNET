@@ -3,7 +3,7 @@ using Orders.Bll;
 
 namespace Orders.Api.Controllers;
 
-[ApiController,Route("api/products")]
+[ApiController,Route("api/orders/products")]
 public sealed class ProductsController(IProductService service) : ControllerBase
 {
     [HttpGet] public async Task<ActionResult<IReadOnlyList<ProductDto>>> GetAll(CancellationToken ct)=>Ok(await service.GetAllAsync(ct));
