@@ -2,6 +2,34 @@
 
 Навчальна база для майбутніх мікросервісів. Магазин продає книги правил, пригоди, набори кубиків та аксесуари для D&D-подібних ігор. Кожна база є самостійним bounded context; між базами немає зовнішніх ключів, а ідентифікатори інтеграційних посилань зберігаються як звичайні значення.
 
+## Запуск платформи
+
+Потрібні .NET 9 SDK і запущений Docker Desktop. З кореня репозиторію:
+
+```powershell
+dotnet run --project Platform.AppHost
+```
+
+Aspire піднімає SQL Server і MongoDB з постійними томами, три сервіси, Aggregator і Gateway. Дочекайтесь стану Running у Aspire Dashboard. Gateway слухає фіксовану адресу `http://localhost:5000`. Aggregator напряму слухає `http://localhost:5104`.
+
+Запити через Gateway:
+
+```powershell
+Invoke-RestMethod http://localhost:5000/api/orders
+Invoke-RestMethod http://localhost:5000/api/catalog/products
+Invoke-RestMethod http://localhost:5000/api/reviews
+Invoke-RestMethod http://localhost:5000/aggregator/
+Invoke-RestMethod http://localhost:5000/aggregator/products/22222222-2222-4222-8222-222222222222
+```
+
+Той самий зведений запит безпосередньо до Aggregator:
+
+```powershell
+Invoke-RestMethod http://localhost:5104/products/22222222-2222-4222-8222-222222222222
+```
+
+`/products/{productId}` збирає картку товару: актуальні дані каталогу, замовлення з цим товаром і відгуки. Якщо один із сервісів недоступний, відповідь лишається `200`, а в `warnings` з’являється пояснення. Поля зі значенням `null` у JSON не потрапляють.
+
 ## Контексти та власники даних
 
 | База | Контекст / сервіс | Сутності, що належать лише цьому контексту |
