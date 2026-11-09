@@ -9,4 +9,7 @@
     <PackageReference Include="AutoMapper" Version="15.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Platform.ServiceDefaults\Platform.ServiceDefaults.csproj" />
+  </ItemGroup>
 </Project>

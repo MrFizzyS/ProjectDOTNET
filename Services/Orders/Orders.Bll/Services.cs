@@ -7,7 +7,7 @@ namespace Orders.Bll;
 
 public interface ICustomerService { Task<IReadOnlyList<CustomerDto>> GetAllAsync(CancellationToken ct); Task<CustomerDto> GetAsync(Guid id,CancellationToken ct); Task<CustomerDto> CreateAsync(CustomerWriteDto dto,CancellationToken ct); Task<CustomerDto> UpdateAsync(Guid id,CustomerWriteDto dto,CancellationToken ct); Task DeleteAsync(Guid id,CancellationToken ct); }
 public interface IProductService { Task<IReadOnlyList<ProductDto>> GetAllAsync(CancellationToken ct); Task<ProductDto> GetAsync(Guid id,CancellationToken ct); Task<ProductDto> CreateAsync(ProductWriteDto dto,CancellationToken ct); Task<ProductDto> UpdateAsync(Guid id,ProductWriteDto dto,CancellationToken ct); Task DeleteAsync(Guid id,CancellationToken ct); }
-public interface IOrderService { Task<IReadOnlyList<OrderDto>> GetAllAsync(CancellationToken ct); Task<OrderDto> GetAsync(Guid id,CancellationToken ct); Task<OrderDto> CreateAsync(CreateOrderDto dto,CancellationToken ct); Task<OrderDto> ChangeStatusAsync(Guid id,UpdateOrderStatusDto dto,CancellationToken ct); Task DeleteAsync(Guid id,CancellationToken ct); }
+public interface IOrderService { Task<IReadOnlyList<OrderDto>> GetAllAsync(CancellationToken ct); Task<OrderDto> GetAsync(Guid id,CancellationToken ct); Task<OrderDto> CreateAsync(CreateOrderDto dto,CancellationToken ct); Task<OrderDto> ChangeStatusAsync(Guid id,UpdateOrderStatusDto dto,CancellationToken ct); Task DeleteAsync(Guid id,CancellationToken ct); Task<IReadOnlyList<OrderDto>> GetByProductAsync(Guid productId, CancellationToken ct); }
 
 public sealed class CustomerService(IUnitOfWork uow,IMapper mapper) : ICustomerService
 {
@@ -30,6 +30,11 @@ public sealed class OrderService(IUnitOfWork uow,IMapper mapper) : IOrderService
 {
  public async Task<IReadOnlyList<OrderDto>> GetAllAsync(CancellationToken ct){var orders=await uow.Orders.GetAllAsync(ct);var result=new List<OrderDto>();foreach(var order in orders)result.Add(await MapOrder(order,ct));return result;}
  public async Task<OrderDto> GetAsync(Guid id,CancellationToken ct)=>await MapOrder(await uow.Orders.GetWithCustomerAsync(id,ct)??throw new EntityNotFoundException($"Order {id} was not found."),ct);
+ public async Task<IReadOnlyList<OrderDto>> GetByProductAsync(Guid productId, CancellationToken ct)
+{
+    var all = await GetAllAsync(ct);
+    return all.Where(o => o.Lines.Any(l => l.ProductId == productId)).ToList();
+}
  private async Task<OrderDto> MapOrder(SalesOrder order,CancellationToken ct){var dto=mapper.Map<OrderDto>(order);dto.Lines=mapper.Map<IReadOnlyList<OrderLineDto>>(await uow.Lines.GetByOrderAsync(order.OrderId,ct));return dto;}
  // One UoW transaction writes SalesOrder and all OrderLine rows; price/name are read from the product snapshot.
  public async Task<OrderDto> CreateAsync(CreateOrderDto d,CancellationToken ct){await uow.BeginAsync(ct:ct);try{if(await uow.Customers.GetByIdAsync(d.CustomerId,ct)is null)throw new EntityNotFoundException($"Customer {d.CustomerId} was not found.");var order=await uow.Orders.AddAsync(new SalesOrder{CustomerId=d.CustomerId},ct);foreach(var requested in d.Lines){if(requested.Quantity is <1 or >99)throw new DomainValidationException("Line quantity must be between 1 and 99.");var product=await uow.Products.GetByIdAsync(requested.ProductId,ct)??throw new EntityNotFoundException($"Product {requested.ProductId} was not found.");await uow.Lines.AddAsync(new OrderLine{OrderId=order.OrderId,ProductId=product.ProductId,ProductNameSnapshot=product.ProductName,UnitPriceSnapshot=product.CurrentPrice,Quantity=requested.Quantity},ct);}await uow.CommitAsync(ct);return await GetAsync(order.OrderId,ct);}catch(SqlException e)when(e.Number is 2601 or 2627){await SafeRollback(ct);throw new BusinessConflictException("The order conflicts with an existing order line or record.");}catch{await SafeRollback(ct);throw;}}

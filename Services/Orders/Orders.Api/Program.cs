@@ -5,12 +5,21 @@ using Orders.Bll;
 using Orders.Dal;
 using Orders.Domain;
 using Platform.ServiceDefaults;
+using Orders.Api.GrpcServices;
+using Orders.Bll.Caching;
+using Platform.ServiceDefaults.Caching;
+using Platform.ServiceDefaults.Rpc;
 
 var builder=WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddLogging();
 builder.Services.AddOrdersDal(builder.Configuration);
-builder.Services.AddScoped<ICustomerService,CustomerService>(); builder.Services.AddScoped<IProductService,ProductService>(); builder.Services.AddScoped<IOrderService,OrderService>();
+builder.Services.AddScoped<ICustomerService,CustomerService>(); builder.Services.AddScoped<IProductService,ProductService>(); builder.AddRedisDistributedCache("redis");
+builder.Services.AddTieredCache();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<IOrderService>(sp => new CachedOrderService(
+    sp.GetRequiredService<OrderService>(), sp.GetRequiredService<ITieredCache>()));
+builder.Services.AddGrpc(options => options.Interceptors.Add<GrpcLoggingInterceptor>());
 builder.Services.AddAutoMapper(_=>{},typeof(MappingProfile));
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options=>options.InvalidModelStateResponseFactory=context=>
 {
@@ -25,7 +34,7 @@ if(app.Configuration.GetValue("Database:InitializeOnStartup",true))
     await using var scope=app.Services.CreateAsyncScope();
     await scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>().InitializeAsync();
 }
-app.UseExceptionHandler(); app.UseSwagger(); app.UseSwaggerUI(); app.MapControllers(); app.MapDefaultEndpoints(); app.Run();
+app.UseExceptionHandler(); app.UseSwagger(); app.UseSwaggerUI(); app.MapGrpcService<OrdersGrpcService>(); app.MapControllers(); app.MapDefaultEndpoints(); app.Run();
 
 public sealed class GlobalExceptionHandler(IProblemDetailsService problemDetails,ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {

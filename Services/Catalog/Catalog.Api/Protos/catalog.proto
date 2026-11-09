@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+option csharp_namespace = "Catalog.Api.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+service CatalogGrpc {
+  rpc GetProduct (GetProductRequest) returns (ProductMessage);
+  rpc ListProducts (ListProductsRequest) returns (ListProductsReply);
+}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message ListProductsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string search = 3;
+}
+
+message ListProductsReply {
+  repeated ProductMessage items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total_count = 4;
+}
+
+message ProductMessage {
+  string product_id = 1;
+  optional string game_system_id = 2;
+  optional string game_system_name = 3;
+  string sku = 4;
+  string name = 5;
+  string description = 6;
+  string product_type = 7;
+  string unit_price = 8;            
+  int32 stock_quantity = 9;
+  bool is_active = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}

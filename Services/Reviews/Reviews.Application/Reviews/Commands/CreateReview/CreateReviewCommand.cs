@@ -1,5 +1,6 @@
 using MediatR;
 using MongoDB.Bson;
+using Reviews.Application.Caching;
 using Reviews.Application.Common.Models;
 
 namespace Reviews.Application.Reviews.Commands.CreateReview;
@@ -13,4 +14,8 @@ public sealed record CreateReviewCommand(
     string? ProductName = null,
     string? OrderId = null,
     string? PurchaseStatusSnapshot = null,
-    ReviewAspectsDto? Aspects = null) : IRequest<ObjectId>;
+    ReviewAspectsDto? Aspects = null) : IRequest<ObjectId>, ICacheInvalidatingCommand
+{
+    public string InvalidationPrefix => ReviewsCacheKeys.Prefix;
+    public string InvalidationReason => "review created";
+}

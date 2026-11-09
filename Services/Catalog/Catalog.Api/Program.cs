@@ -8,9 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using Serilog.Events;
 using Platform.ServiceDefaults;
+using Catalog.Api.GrpcServices;
+using Platform.ServiceDefaults.Rpc;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+builder.AddRedisDistributedCache("redis");
+builder.Services.AddGrpc(options => options.Interceptors.Add<GrpcLoggingInterceptor>());
 builder.Host.UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
@@ -48,6 +52,7 @@ app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();
+app.MapGrpcService<CatalogGrpcService>();
 app.MapDefaultEndpoints();
 app.Run();
 

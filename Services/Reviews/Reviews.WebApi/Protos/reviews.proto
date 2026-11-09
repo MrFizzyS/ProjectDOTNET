@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package reviews.v1;
+
+option csharp_namespace = "Reviews.WebApi.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+service ReviewsGrpc {
+  rpc GetReview (GetReviewRequest) returns (ReviewMessage);
+  rpc ListReviewsByProduct (ListReviewsByProductRequest) returns (ListReviewsByProductReply);
+}
+
+message GetReviewRequest { string id = 1; }
+
+message ListReviewsByProductRequest {
+  string product_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListReviewsByProductReply {
+  repeated ReviewMessage items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total_count = 4;
+}
+
+message ReviewAspectsMessage {
+  int32 usability = 1;
+  int32 story = 2;
+  int32 value = 3;
+}
+
+message ReviewReplyMessage {
+  string author_customer_id = 1;
+  string author_handle = 2;
+  string body = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message ReviewMessage {
+  string id = 1;
+  string product_id = 2;
+  optional string product_name = 3;
+  string author_customer_id = 4;
+  string author_handle = 5;
+  int32 rating = 6;
+  string body = 7;
+  optional ReviewAspectsMessage aspects = 8;
+  repeated ReviewReplyMessage replies = 9;
+  google.protobuf.Timestamp created_at = 10;
+  int32 version = 11;
+}

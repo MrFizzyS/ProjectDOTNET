@@ -12,6 +12,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using Platform.ServiceDefaults.Caching;
 
 namespace Platform.ServiceDefaults;
 
@@ -62,7 +63,8 @@ public static class Extensions
                 .AddSource("MongoDB.Driver"))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation());
+                .AddHttpClientInstrumentation()
+                .AddMeter(CacheMetrics.MeterName));
 
         if (!string.IsNullOrWhiteSpace(
                 builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))

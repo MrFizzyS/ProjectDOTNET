@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package orders.v1;
+
+option csharp_namespace = "Orders.Api.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+service OrdersGrpc {
+  rpc GetOrder (GetOrderRequest) returns (OrderMessage);
+  rpc ListOrdersByProduct (ListOrdersByProductRequest) returns (ListOrdersByProductReply);
+}
+
+message GetOrderRequest { string order_id = 1; }
+message ListOrdersByProductRequest { string product_id = 1; }
+message ListOrdersByProductReply { repeated OrderMessage orders = 1; }
+
+message OrderLineMessage {
+  string product_id = 1;
+  string product_name_snapshot = 2;
+  int32 quantity = 3;
+  string unit_price_snapshot = 4;   // decimal як рядок, InvariantCulture
+}
+
+message OrderMessage {
+  string order_id = 1;
+  string customer_id = 2;
+  string status = 3;
+  repeated OrderLineMessage lines = 4;
+  google.protobuf.Timestamp placed_at = 5;
+}
