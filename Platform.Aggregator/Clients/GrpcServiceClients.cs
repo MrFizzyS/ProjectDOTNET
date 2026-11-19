@@ -3,12 +3,13 @@ using Catalog.Api.Protos;
 using Orders.Api.Protos;
 using Platform.Aggregator.Contracts;
 using Reviews.WebApi.Protos;
+using Platform.Aggregator.Resilience;
 
 namespace Platform.Aggregator.Clients;
 
 internal static class GrpcDefaults
 {
-    public static DateTime Deadline() => DateTime.UtcNow.AddSeconds(3);
+    public static DateTime Deadline(TimeSpan timeout) => DateTime.UtcNow.Add(timeout);
 }
 
 public sealed class CatalogServiceClient(CatalogGrpc.CatalogGrpcClient grpc)
@@ -17,7 +18,7 @@ public sealed class CatalogServiceClient(CatalogGrpc.CatalogGrpcClient grpc)
     {
         var p = await grpc.GetProductAsync(
             new GetProductRequest { ProductId = productId.ToString() },
-            deadline: GrpcDefaults.Deadline(),
+            deadline: GrpcDefaults.Deadline(ResilienceProfiles.Catalog.GrpcDeadline),
             cancellationToken: cancellationToken);
 
         return new CatalogProductDto
@@ -42,7 +43,7 @@ public sealed class OrdersServiceClient(OrdersGrpc.OrdersGrpcClient grpc)
     {
         var reply = await grpc.ListOrdersByProductAsync(
             new ListOrdersByProductRequest { ProductId = productId.ToString() },
-            deadline: GrpcDefaults.Deadline(),
+            deadline: GrpcDefaults.Deadline(ResilienceProfiles.Orders.GrpcDeadline),
             cancellationToken: cancellationToken);
 
         var id = productId.ToString();
@@ -67,7 +68,7 @@ public sealed class ReviewsServiceClient(ReviewsGrpc.ReviewsGrpcClient grpc)
     {
         var reply = await grpc.ListReviewsByProductAsync(
             new ListReviewsByProductRequest { ProductId = productId.ToString(), Page = 1, PageSize = 20 },
-            deadline: GrpcDefaults.Deadline(),
+            deadline: GrpcDefaults.Deadline(ResilienceProfiles.Reviews.GrpcDeadline),
             cancellationToken: cancellationToken);
 
         return reply.Items.Select(r => new ProductReviewDto

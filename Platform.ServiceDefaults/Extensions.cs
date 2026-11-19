@@ -30,12 +30,8 @@ public static class Extensions
                     .ReadFrom.Configuration(builder.Configuration)
                     .ReadFrom.Services(services)
                     .Enrich.FromLogContext()
-                    .Enrich.WithProperty(
-                        "ServiceName",
-                        environment.ApplicationName)
-                    .Enrich.WithProperty(
-                        "Environment",
-                        environment.EnvironmentName)
+                    .Enrich.WithProperty("ServiceName", environment.ApplicationName)
+                    .Enrich.WithProperty("Environment", environment.EnvironmentName)
                     .Enrich.WithMachineName()
                     .Enrich.WithThreadId()
                     .MinimumLevel.Is(
@@ -53,8 +49,7 @@ public static class Extensions
         });
 
         builder.Services.AddOpenTelemetry()
-            .ConfigureResource(resource =>
-                resource.AddService(environment.ApplicationName))
+            .ConfigureResource(resource => resource.AddService(environment.ApplicationName))
             .WithTracing(tracing => tracing
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
@@ -64,16 +59,34 @@ public static class Extensions
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddMeter(CacheMetrics.MeterName));
+                .AddMeter(
+                    CacheMetrics.MeterName,
+                    "Polly",                  
+                    "Orders.Api",
+                    "Catalog.Api",
+                    "Reviews.Api",
+                    "Platform.Aggregator")
+                .AddView("*.operation.duration", new ExplicitBucketHistogramConfiguration
+                {
+                    Boundaries = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+                }));
 
-        if (!string.IsNullOrWhiteSpace(
-                builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         {
-            builder.Services.AddOpenTelemetry()
-                .UseOtlpExporter();
+            builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
-        builder.Services.AddHealthChecks();
+        builder.Services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
+
+        builder.Services.AddHealthChecks()
+            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+        builder.Services.Configure<HealthCheckPublisherOptions>(o =>
+        {
+            o.Delay = TimeSpan.FromSeconds(2);
+            o.Period = TimeSpan.FromSeconds(10);
+        });
+
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddTransient<CorrelationIdDelegatingHandler>();
 
@@ -82,10 +95,17 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        app.MapHealthChecks("/health");
-        app.MapHealthChecks("/alive", new HealthCheckOptions
+        app.MapHealthChecks("/health", new HealthCheckOptions
         {
-            Predicate = _ => false
+            ResponseWriter = HealthResponseWriter.WriteAsync
+        });
+        var live = new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") };
+        app.MapHealthChecks("/alive", live);
+        app.MapHealthChecks("/health/live", live);
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("ready"),
+            ResponseWriter = HealthResponseWriter.WriteAsync
         });
 
         return app;

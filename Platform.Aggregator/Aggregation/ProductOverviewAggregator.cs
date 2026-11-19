@@ -2,6 +2,9 @@ using System.Diagnostics;
 using Grpc.Core;
 using Platform.Aggregator.Clients;
 using Platform.Aggregator.Contracts;
+using Platform.Aggregator.Metrics;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace Platform.Aggregator.Aggregation;
 
@@ -10,6 +13,7 @@ public sealed class ProductOverviewAggregator(
     CatalogServiceClient catalogClient,
     ReviewsServiceClient reviewsClient,
     ProductOverviewCache cache,
+    AggregatorMetrics metrics,
     ILogger<ProductOverviewAggregator> logger)
 {
     public async Task<ProductOverviewDto> GetAsync(Guid productId, CancellationToken cancellationToken)
@@ -50,6 +54,7 @@ public sealed class ProductOverviewAggregator(
         }
         else
         {
+            metrics.PartialResponse();
             logger.LogInformation("Partial response for {ProductId}: {WarningCount} warnings, not cached", productId, warnings.Count);
         }
 
@@ -66,9 +71,9 @@ public sealed class ProductOverviewAggregator(
         try
         {
             var data = await action(cancellationToken);
-            logger.LogInformation(
-                "{ServiceName} gRPC call completed in {ElapsedMilliseconds} ms",
-                serviceName, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            var ms = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            metrics.Call(serviceName, "success", ms);
+            logger.LogInformation("{ServiceName} gRPC call completed in {ElapsedMilliseconds} ms", serviceName, ms);
             return new ServiceCall<T>(data, null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -81,22 +86,38 @@ public sealed class ProductOverviewAggregator(
         }
         catch (RpcException ex)
         {
-            logger.LogWarning(
-                ex, "{ServiceName} gRPC call failed with {GrpcStatus} in {ElapsedMilliseconds} ms",
-                serviceName, ex.StatusCode, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            var ms = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            var circuitOpen = ex.Status.DebugException is BrokenCircuitException;
+            var timeout = ex.StatusCode == StatusCode.DeadlineExceeded || ex.Status.DebugException is TimeoutRejectedException;
 
-            var warning = ex.StatusCode switch
+            var result = circuitOpen ? "circuit_open"
+                : timeout ? "timeout"
+                : ex.StatusCode switch
+                {
+                    StatusCode.NotFound => "not_found",
+                    StatusCode.Unavailable => "unavailable",
+                    _ => "error"
+                };
+            metrics.Call(serviceName, result, ms);
+
+            logger.LogWarning(
+                ex, "{ServiceName} gRPC call failed with {GrpcStatus} ({Result}) in {ElapsedMilliseconds} ms",
+                serviceName, ex.StatusCode, result, ms);
+
+            var warning = result switch
             {
-                StatusCode.NotFound => $"Сервіс {serviceName}: дані не знайдено.",
-                StatusCode.Unavailable or StatusCode.DeadlineExceeded => $"Сервіс {serviceName} недоступний.",
+                "circuit_open" => $"Сервіс {serviceName} тимчасово вимкнено (circuit breaker), повторіть пізніше.",
+                "not_found" => $"Сервіс {serviceName}: дані не знайдено.",
+                "timeout" or "unavailable" => $"Сервіс {serviceName} недоступний.",
                 _ => $"Сервіс {serviceName} повернув помилку ({ex.StatusCode})."
             };
             return new ServiceCall<T>(default, warning);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "{ServiceName} call failed in {ElapsedMilliseconds} ms",
-                serviceName, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            var ms = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            metrics.Call(serviceName, "error", ms);
+            logger.LogWarning(ex, "{ServiceName} call failed in {ElapsedMilliseconds} ms", serviceName, ms);
             return new ServiceCall<T>(default, $"Сервіс {serviceName} недоступний.");
         }
     }

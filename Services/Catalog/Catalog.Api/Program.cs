@@ -10,10 +10,16 @@ using Serilog.Events;
 using Platform.ServiceDefaults;
 using Catalog.Api.GrpcServices;
 using Platform.ServiceDefaults.Rpc;
+using Catalog.Api.HealthChecks;
+using Catalog.Api.Metrics;
+using Catalog.Bll.Caching;
+using Platform.ServiceDefaults.Caching;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
-builder.AddRedisDistributedCache("redis");
+builder.AddRedisDistributedCache("redis",
+    configureSettings: s => s.DisableHealthChecks = true,
+    configureOptions: RedisDefaults.FailFast);
 builder.Services.AddGrpc(options => options.Interceptors.Add<GrpcLoggingInterceptor>());
 builder.Host.UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -24,6 +30,11 @@ var connectionString = Environment.GetEnvironmentVariable("CATALOG_DB_CONNECTION
     ?? builder.Configuration.GetConnectionString("CatalogDb")
     ?? throw new InvalidOperationException("ConnectionStrings:CatalogDb is missing.");
 builder.Services.AddCatalogBll(connectionString);
+builder.Services.AddSingleton<CatalogMetrics>();
+builder.Services.AddScoped<IProductService>(sp => new MeteredProductService(
+    new CachedProductService(sp.GetRequiredService<ProductService>(), sp.GetRequiredService<ITieredCache>()),
+    sp.GetRequiredService<CatalogMetrics>()));
+builder.Services.AddCatalogHealthChecks(connectionString, builder.Configuration);
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -53,6 +64,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();
 app.MapGrpcService<CatalogGrpcService>();
+app.MapGrpcHealthChecksService();
 app.MapDefaultEndpoints();
 app.Run();
 

@@ -8,7 +8,7 @@
     <ProjectReference Include="..\Reviews.Application\Reviews.Application.csproj" />
     <ProjectReference Include="..\Reviews.Domain\Reviews.Domain.csproj" />
     <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.9" />
   </ItemGroup>
 </Project>
